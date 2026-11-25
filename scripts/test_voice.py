@@ -24,12 +24,20 @@ import sys
 import time
 from pathlib import Path
 
+import perth
 import torch
 import torchaudio
 from chatterbox.tts import ChatterboxTTS, Conditionals
 
 DEFAULT_EXAGGERATION = 0.5
 DEFAULT_CFG_WEIGHT = 0.5
+
+
+class PassThroughWatermarker:
+    """Stands in for Perth's watermarker and returns audio unchanged."""
+
+    def apply_watermark(self, audio, *args, **kwargs):
+        return audio
 
 
 def main():
@@ -51,6 +59,8 @@ def main():
         sys.exit(1)
 
     print(f"Loading model on {args.device}...")
+    # Match the server, which never watermarks its output
+    perth.PerthImplicitWatermarker = PassThroughWatermarker
     model = ChatterboxTTS.from_pretrained(device=args.device)
 
     backend = "eager" if args.device == "cpu" else "cudagraphs-manual"
