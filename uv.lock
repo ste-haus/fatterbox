@@ -237,7 +237,6 @@ version = "1.2.0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
-    { name = "perth" },
     { name = "pydantic" },
     { name = "torch" },
     { name = "torchaudio" },
@@ -249,7 +248,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.104.0" },
-    { name = "perth" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "torch" },
     { name = "torchaudio" },
@@ -714,12 +712,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/a1/d4/1fc4078c65507b51b
 wheels = [
     { url = "https://files.pythonhosted.org/packages/20/12/38679034af332785aac8774540895e234f4d07f7545804097de4b666afd8/packaging-25.0-py3-none-any.whl", hash = "sha256:29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484", size = 66469, upload-time = "2025-04-19T11:48:57.875Z" },
 ]
-
-[[package]]
-name = "perth"
-version = "1.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/49/ca/3bfa6b12f28b30ef64a2e63405f9008ae50c014ffd5ef85a4ec00245b29c/perth-1.0.0.tar.gz", hash = "sha256:7a39f7e4b051e670e7667a0b495b3535c550838df6d972352a7126b17849f169", size = 1724, upload-time = "2015-07-24T14:50:30.385Z" }
 
 [[package]]
 name = "pillow"

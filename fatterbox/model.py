@@ -5,6 +5,7 @@ import threading
 from functools import lru_cache
 from pathlib import Path
 
+import perth
 import torch
 from chatterbox.tts import ChatterboxTTS, REPO_ID
 from huggingface_hub import hf_hub_download
@@ -26,8 +27,7 @@ def load_model(model_dir: Path, device: str = "cuda", dtype: str = "float32"):
     """Load Chatterbox TTS model (cached)."""
     _LOGGER.info(f"Loading Chatterbox TTS model on {device} with dtype {dtype}...")
 
-    # Patch watermarker if perth module is not available or broken
-    _patch_watermarker()
+    _disable_watermarker()
 
     # Load model
     model = ChatterboxTTS.from_local(ensure_weights(model_dir), device)
@@ -74,29 +74,22 @@ def ensure_weights(model_dir: Path) -> Path:
     return model_dir
 
 
-def _patch_watermarker():
-    """Patch watermarker if perth module is not available or broken."""
-    try:
-        import perth
-        if perth.PerthImplicitWatermarker is None:
-            raise ImportError("Perth watermarker not properly initialized")
-    except (ImportError, AttributeError) as e:
-        _LOGGER.warning(f"Perth watermarking not available ({e}), disabling watermarking")
-        # Create a dummy watermarker class that mimics the Perth API
-        class DummyWatermarker:
-            def apply_watermark(self, audio, *args, **kwargs):
-                """Pass-through watermark that returns audio unchanged."""
-                return audio
-            
-            def __call__(self, audio, *args, **kwargs):
-                return audio
-        
-        # Monkey-patch it into the module
-        import sys
-        if 'perth' not in sys.modules:
-            import types
-            sys.modules['perth'] = types.ModuleType('perth')
-        sys.modules['perth'].PerthImplicitWatermarker = lambda: DummyWatermarker()
+class _PassThroughWatermarker:
+    """Stands in for Perth's watermarker and returns audio unchanged."""
+
+    def apply_watermark(self, audio, *args, **kwargs):
+        return audio
+
+
+def _disable_watermarker():
+    """Make ChatterboxTTS construct a pass-through instead of Perth's watermarker.
+
+    ChatterboxTTS.__init__ looks up perth.PerthImplicitWatermarker when it is
+    called, so this must run before the model is constructed. It also keeps
+    Perth's own network from being loaded at all.
+    """
+    perth.PerthImplicitWatermarker = _PassThroughWatermarker
+    _LOGGER.info("Audio watermarking disabled")
 
 
 def _convert_model_dtype(model, dtype: str):
