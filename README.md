@@ -53,10 +53,13 @@ cp ~/somewhere/Jake.wav voices/
 ```bash
 docker run --gpus all \
   -v ./voices:/chatter/voices \
+  -v ./models:/chatter/models \
   -p 10200:10200 \
   -p 8000:8000 \
   docker.io/justinlime/fatterbox:v0.1.0
 ```
+
+The first start downloads about 3 GB of model weights into `./models`; later starts load them from there with no network access. Without the `models` mount the container still works, but downloads the weights again every time it is recreated.
 
 **3. Say something.**
 
@@ -159,6 +162,7 @@ Everything is an environment variable prefixed with `FATTERBOX_`. Each also has 
 | `FATTERBOX_OPENAPI_HOST` | `0.0.0.0` | HTTP bind address |
 | `FATTERBOX_OPENAPI_PORT` | `8000` | HTTP port |
 | `FATTERBOX_VOICES_DIR` | `./voices` | Where voice files live |
+| `FATTERBOX_MODEL_DIR` | `./models` | Where model weights live; any missing files are downloaded here at startup |
 | `FATTERBOX_PRECONDITION_ON_START` | `false` | Transcode `.mp3` and generate missing `.pt` at startup |
 | `FATTERBOX_DEBUG` | `false` | Debug logging |
 
@@ -189,6 +193,7 @@ Everything is an environment variable prefixed with `FATTERBOX_`. Each also has 
 ```bash
 docker run --gpus all \
   -v ./voices:/chatter/voices \
+  -v ./models:/chatter/models \
   -p 10200:10200 \
   -p 8000:8000 \
   -e FATTERBOX_DTYPE=bf16 \

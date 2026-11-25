@@ -85,7 +85,10 @@ async def main():
     parser.add_argument("--voices-dir", type=Path, 
                        default=Path(get_env_str("FATTERBOX_VOICES_DIR", "./voices")),
                        help="Directory containing voice reference .wav files (default: ./voices, env: FATTERBOX_VOICES_DIR)")
-    parser.add_argument("--device", 
+    parser.add_argument("--model-dir", type=Path,
+                       default=Path(get_env_str("FATTERBOX_MODEL_DIR", "./models")),
+                       help="Directory holding the model weights; missing files are downloaded into it (default: ./models, env: FATTERBOX_MODEL_DIR)")
+    parser.add_argument("--device",
                        default=get_env_str("FATTERBOX_DEVICE", "cuda"),
                        choices=["cuda", "cpu"],
                        help="Device to run model on (default: cuda, env: FATTERBOX_DEVICE)")
@@ -157,7 +160,7 @@ async def main():
     _LOGGER.info(f"  min_p: {args.min_p}")
     
     # Load model
-    model = load_model(args.device, args.dtype)
+    model = load_model(args.model_dir, args.device, args.dtype)
     
     # Store backend preference and generation params on model
     model._wyoming_backend = args.backend

@@ -1,24 +1,36 @@
 """Model loading and initialization for Chatterbox TTS."""
 import logging
+import os
 import threading
 from functools import lru_cache
+from pathlib import Path
 
 import torch
-from chatterbox.tts import ChatterboxTTS
+from chatterbox.tts import ChatterboxTTS, REPO_ID
+from huggingface_hub import hf_hub_download
 
 _LOGGER = logging.getLogger(__name__)
 
+# The files ChatterboxTTS.from_pretrained fetches; from_local expects all of them
+MODEL_FILES = (
+    "ve.safetensors",
+    "t3_cfg.safetensors",
+    "s3gen.safetensors",
+    "tokenizer.json",
+    "conds.pt",
+)
+
 
 @lru_cache(maxsize=1)
-def load_model(device: str = "cuda", dtype: str = "float32"):
+def load_model(model_dir: Path, device: str = "cuda", dtype: str = "float32"):
     """Load Chatterbox TTS model (cached)."""
     _LOGGER.info(f"Loading Chatterbox TTS model on {device} with dtype {dtype}...")
-    
+
     # Patch watermarker if perth module is not available or broken
     _patch_watermarker()
-    
+
     # Load model
-    model = ChatterboxTTS.from_pretrained(device=device)
+    model = ChatterboxTTS.from_local(ensure_weights(model_dir), device)
     
     # Convert to specified dtype if not float32
     if dtype.lower() not in ["float32", "fp32"]:
@@ -30,6 +42,36 @@ def load_model(device: str = "cuda", dtype: str = "float32"):
     
     _LOGGER.info("Model loaded successfully")
     return model
+
+
+def ensure_weights(model_dir: Path) -> Path:
+    """Download any model files missing from model_dir and return it.
+
+    Files already present are used as-is and never re-checked against the hub,
+    so a populated directory loads with no network access.
+    """
+    model_dir = Path(model_dir).resolve()
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    if not os.path.ismount(model_dir):
+        _LOGGER.warning(
+            f"{model_dir} is not a mounted volume; model weights will be "
+            f"re-downloaded whenever the container is recreated"
+        )
+
+    missing = [name for name in MODEL_FILES if not (model_dir / name).is_file()]
+    if not missing:
+        _LOGGER.info(f"Using model weights from {model_dir}")
+        return model_dir
+
+    # hf_hub_download stages each file under model_dir/.cache and moves it into
+    # place when complete, so an interrupted download never leaves a partial file
+    # that the is_file() check above would accept
+    for name in missing:
+        _LOGGER.info(f"Downloading {name} from {REPO_ID} into {model_dir}...")
+        hf_hub_download(repo_id=REPO_ID, filename=name, local_dir=model_dir)
+
+    return model_dir
 
 
 def _patch_watermarker():
